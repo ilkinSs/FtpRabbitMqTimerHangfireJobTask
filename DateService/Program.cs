@@ -1,4 +1,6 @@
 ﻿using DateService.Models;
+using DateService.Utilities;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
@@ -17,6 +19,10 @@ namespace DateService
 
         static void Main(string[] args)
         {
+            var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+            ILogger logger = loggerFactory.CreateLogger<Program>();
+            logger.LogInformation("DateService is start to check...");
+
             aTimer = new System.Timers.Timer(10000);
 
             // Hook up the Elapsed event for the timer.
@@ -30,13 +36,21 @@ namespace DateService
 
         private static void OnTimedEvent(object source, ElapsedEventArgs e)
         {
+
+            var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+            ILogger logger = loggerFactory.CreateLogger<Program>();
+            logger.LogInformation("DateService is checking  ftp folder...");
             // Get the object used to communicate with the server.
 
-            FtpWebRequest fullRequest = (FtpWebRequest)WebRequest.Create("ftp://172.18.210.6/Date/");
+            string userName = ConfigHelper.GetConfigVal("User", "UserName");
+            string password = ConfigHelper.GetConfigVal("User", "Password");
+            string ip = ConfigHelper.GetConfigVal("FtpIp", "Date");
+
+            FtpWebRequest fullRequest = (FtpWebRequest)WebRequest.Create(ip);
             fullRequest.Method = WebRequestMethods.Ftp.ListDirectory;
 
             // This example assumes the FTP site uses anonymous logon.
-            fullRequest.Credentials = new NetworkCredential("ilkin145", "ilkin145");
+            fullRequest.Credentials = new NetworkCredential(userName, password);
             var fyleNames = new List<string>();
 
             try
@@ -45,19 +59,12 @@ namespace DateService
                 Stream fullResponseStream = fullResponse.GetResponseStream();
                 StreamReader fullReader = new StreamReader(fullResponseStream);
 
-
                 while (!fullReader.EndOfStream)
                 {
                     fyleNames.Add(fullReader.ReadLine());
                 }
-
                 fullReader.Close();
                 fullResponse.Close();
-
-
-
-
-
             }
             catch (Exception ex)
             {
@@ -67,11 +74,11 @@ namespace DateService
 
             foreach (var name in fyleNames)
             {
-                FtpWebRequest request = (FtpWebRequest)WebRequest.Create($"ftp://172.18.210.6/Date/{name}");
+                FtpWebRequest request = (FtpWebRequest)WebRequest.Create($"{ip}{name}");
                 request.Method = WebRequestMethods.Ftp.DownloadFile;
 
                 // This example assumes the FTP site uses anonymous logon.
-                request.Credentials = new NetworkCredential("ilkin145", "ilkin145");
+                request.Credentials = new NetworkCredential(userName, password);
 
                 try
                 {
@@ -90,8 +97,8 @@ namespace DateService
                     reader.Close();
                     response.Close();
 
-                    FtpWebRequest requestForDeleting = (FtpWebRequest)WebRequest.Create($"ftp://172.18.210.6/Date/{name}");
-                    requestForDeleting.Credentials = new NetworkCredential("ilkin145", "ilkin145");
+                    FtpWebRequest requestForDeleting = (FtpWebRequest)WebRequest.Create($"{ip}{name}");
+                    requestForDeleting.Credentials = new NetworkCredential(userName, password);
                     requestForDeleting.UseBinary = true;
                     requestForDeleting.UsePassive = true;
                     requestForDeleting.KeepAlive = true;
@@ -117,6 +124,8 @@ namespace DateService
                     var body = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(vm));
 
                     channel.BasicPublish("", "demo-queue", null, body);
+                    logger.LogInformation("DateService is sending data to RabbitMQ...");
+
                 }
                 catch (Exception ex)
                 {

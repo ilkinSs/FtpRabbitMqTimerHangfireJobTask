@@ -69,11 +69,11 @@ namespace DistributionService.Lib
                 return;
             }
 
-            /* Upload File */
-            public void upload(string ftpIp, string remoteFile, string localFile)
+        /* Upload File */
+        public void upload(string ftpIp, string remoteFile, string [] dataTable)
+        {
+            try
             {
-                try
-                {
                 string ftpServerIP = ftpIp;
                 string ftpUserID = "ilkin145";
                 string ftpPassword = "ilkin145";
@@ -83,8 +83,9 @@ namespace DistributionService.Lib
                 ftpReq.UseBinary = true;
                 ftpReq.Method = WebRequestMethods.Ftp.UploadFile;
                 ftpReq.Credentials = new NetworkCredential(ftpUserID, ftpPassword);
-
-                byte[] b = File.ReadAllBytes(localFile);
+                byte[] b = dataTable.SelectMany(s =>
+                            System.Text.Encoding.UTF8.GetBytes(s + Environment.NewLine)).ToArray();
+                //byte[] b = File.ReadAllBytes(localFile);
 
                 ftpReq.ContentLength = b.Length;
                 using (Stream s = ftpReq.GetRequestStream())
@@ -92,11 +93,39 @@ namespace DistributionService.Lib
                     s.Write(b, 0, b.Length);
                 }
 
-                FtpWebResponse ftpResp = (FtpWebResponse)ftpReq.GetResponse();    
-                }
-                catch (Exception ex) { Console.WriteLine(ex.ToString()); }
-                return;
+                FtpWebResponse ftpResp = (FtpWebResponse)ftpReq.GetResponse();
             }
+            catch (Exception ex) { Console.WriteLine(ex.ToString()); }
+            return;
+        }
+
+        //public void upload(string ftpIp, string remoteFile, string localFile)
+        //    {
+        //        try
+        //        {
+        //        string ftpServerIP = ftpIp;
+        //        string ftpUserID = "ilkin145";
+        //        string ftpPassword = "ilkin145";
+        //        ////string ftpURI = "";
+        //        string filename = ftpServerIP + "//" + remoteFile;
+        //        FtpWebRequest ftpReq = (FtpWebRequest)WebRequest.Create(filename);
+        //        ftpReq.UseBinary = true;
+        //        ftpReq.Method = WebRequestMethods.Ftp.UploadFile;
+        //        ftpReq.Credentials = new NetworkCredential(ftpUserID, ftpPassword);
+
+        //        byte[] b = File.ReadAllBytes(localFile);
+
+        //        ftpReq.ContentLength = b.Length;
+        //        using (Stream s = ftpReq.GetRequestStream())
+        //        {
+        //            s.Write(b, 0, b.Length);
+        //        }
+
+        //        FtpWebResponse ftpResp = (FtpWebResponse)ftpReq.GetResponse();    
+        //        }
+        //        catch (Exception ex) { Console.WriteLine(ex.ToString()); }
+        //        return;
+        //    }
 
             /* Delete File */
             public void delete(string deleteFile)

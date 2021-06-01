@@ -17,6 +17,7 @@ using Microsoft.EntityFrameworkCore;
 using Hangfire;
 using Hangfire.MemoryStorage;
 using DistributionService.Models;
+using DistributionService;
 
 namespace SimbrellaEx1
 {
@@ -33,12 +34,21 @@ namespace SimbrellaEx1
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddControllers();
-            services.AddHangfire(config =>
+            services.AddSingleton<AutomaticRetryAttribute>();
+            services.AddHangfire((provider, config) =>
+            {
 
-            config.SetDataCompatibilityLevel(CompatibilityLevel.Version_170)
-            .UseSimpleAssemblyNameTypeSerializer()
-            .UseDefaultTypeSerializer()
-            .UseMemoryStorage());
+                config.SetDataCompatibilityLevel(CompatibilityLevel.Version_170)
+                .UseSimpleAssemblyNameTypeSerializer()
+                .UseDefaultTypeSerializer()
+                .UseMemoryStorage();
+                config.UseFilter(provider.GetRequiredService<AutomaticRetryAttribute>());
+            }
+
+
+            );
+
+
 
             services.AddHangfireServer();
 
@@ -75,10 +85,10 @@ namespace SimbrellaEx1
             app.UseHangfireDashboard();
             //backgroundJobClient.Enqueue(() => Console.WriteLine("Hello bro"));
             recurringJobManager.AddOrUpdate(
-                "Run every minute" ,
+                "Run every minute",
                 () => serviceProvider.GetService<IPeriodicDBChecker>().Check(),
-                Cron.Minutely
-                );
+                "*/15 * * * * *"
+                ) ;
         }
     }
 }

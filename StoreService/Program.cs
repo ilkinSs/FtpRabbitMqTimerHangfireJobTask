@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using StoreService.Lib;
@@ -10,10 +11,16 @@ using System.Text;
 
 namespace StoreService
 {
-   static class Program
+    class Program
     {
+
         static void Main(string[] args)
         {
+
+            var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+            ILogger logger = loggerFactory.CreateLogger<Program>();
+            logger.LogInformation("StoreService is storing files to ftpFolder...");
+
             var factory = new ConnectionFactory
             {
 
